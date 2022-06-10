@@ -1,2 +1,2 @@
 # zakazi
-Zakazi
+Test app for appointment booking
