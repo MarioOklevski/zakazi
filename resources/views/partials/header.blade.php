@@ -11,14 +11,6 @@
            data-toggle="collapse"
            data-target=".navbar-collapse">
         </a>
-
-        <div class="top-menu">
-            <ul class="nav navbar-nav pull-right">
-                <li>
-                    <a href="https://quickadminpanel.com" target="_blank">Generated with QuickAdminPanel</a>
-                </li>
-            </ul>
-        </div>
     </div>
 </div>
 
