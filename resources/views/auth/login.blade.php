@@ -39,7 +39,7 @@
         padding: 0px;
         }
         .login {
-        background: linear-gradient(to bottom, #0099ff 0%, #fff 100%);
+        background: linear-gradient(to bottom right, #0099ff 0%, #fff 100%);
         height: 100vh;
         width: 100%;
         justify-content: center;

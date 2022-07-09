@@ -165,7 +165,6 @@ Page Header
 .page-header.navbar .menu-toggler {
     display: block;
     cursor: pointer;
-    opacity: 0.7;
     filter: alpha(opacity=70);
     width: 24px;
     height: 24px;
@@ -2915,7 +2914,7 @@ Theme Panel
 }
 
 .theme-panel > .toggler:hover {
-    background-color: #006DB3 !important;
+    background-color: #303030 !important;
 }
 
 .theme-panel > .toggler-close {
@@ -2926,7 +2925,7 @@ Theme Panel
     z-index: 101;
     cursor: pointer;
     position: absolute;
-    background: #006DB3 url(../images/icon-color-close.png) center no-repeat !important;
+    background: #303030 url(../images/icon-color-close.png) center no-repeat !important;
     -webkit-border-radius: 4px;
     -moz-border-radius: 4px;
     -ms-border-radius: 4px;
@@ -2944,7 +2943,7 @@ Theme Panel
     display: none;
     position: absolute;
     z-index: 100;
-    background: #006DB3;
+    background: #303030;
     box-shadow: 5px 5px rgba(61, 61, 61, 0.1);
     -webkit-border-radius: 4px;
     -moz-border-radius: 4px;
@@ -3009,7 +3008,7 @@ Theme Panel
 }
 
 .theme-panel > .theme-options > .theme-option.theme-colors > ul > li:hover, .theme-panel > .theme-options > .theme-option.theme-colors > ul > li.current {
-    border: solid 2px #005288;
+    border: solid 2px #46b5ff;
 }
 
 .theme-panel > .theme-options > .theme-option.theme-colors > ul > li.color-default {
