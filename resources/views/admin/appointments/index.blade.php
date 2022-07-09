@@ -1,124 +1,125 @@
-@extends('layouts.admin')
+@extends('layouts.app')
+
 @section('content')
-@can('appointment_create')
-    <div style="margin-bottom: 10px;" class="row">
-        <div class="col-lg-12">
-            <a class="btn btn-success" href="{{ route("admin.appointments.create") }}">
-                {{ trans('global.add') }} {{ trans('cruds.appointment.title_singular') }}
-            </a>
+    <h3 class="page-title">@lang('quickadmin.appointments.title')</h3>
+    @can('appointment_create')
+        <p>
+            <a href="{{ route('admin.appointments.create') }}"
+               class="btn btn-success">@lang('quickadmin.qa_add_new')</a>
+
+        </p>
+    @endcan
+
+    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.1.0/fullcalendar.min.css' />
+
+    <div id='calendar'></div>
+
+    <br />
+
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            @lang('quickadmin.qa_list')
+        </div>
+
+        <div class="panel-body table-responsive">
+            <table class="table table-bordered table-striped {{ count($appointments) > 0 ? 'datatable' : '' }} @can('appointment_delete') dt-select @endcan">
+                <thead>
+                <tr>
+                    @can('appointment_delete')
+                        <th style="text-align:center;"><input type="checkbox" id="select-all"/></th>
+                    @endcan
+
+                    <th>@lang('quickadmin.appointments.fields.client')</th>
+                    <th>@lang('quickadmin.clients.fields.last-name')</th>
+                    <th>@lang('quickadmin.clients.fields.phone')</th>
+                    <th>@lang('quickadmin.clients.fields.email')</th>
+                    <th>@lang('quickadmin.appointments.fields.employee')</th>
+                    <th>@lang('quickadmin.employees.fields.last-name')</th>
+                    <th>@lang('quickadmin.appointments.fields.start-time')</th>
+                    <th>@lang('quickadmin.appointments.fields.finish-time')</th>
+                    <th>@lang('quickadmin.appointments.fields.comments')</th>
+                    <th>&nbsp;</th>
+                </tr>
+                </thead>
+
+                <tbody>
+                @if (count($appointments) > 0)
+                    @foreach ($appointments as $appointment)
+                        <tr data-entry-id="{{ $appointment->id }}">
+                            @can('appointment_delete')
+                                <td></td>
+                            @endcan
+
+                            <td>{{ $appointment->client->first_name or '' }}</td>
+                            <td>{{ isset($appointment->client) ? $appointment->client->last_name : '' }}</td>
+                            <td>{{ isset($appointment->client) ? $appointment->client->phone : '' }}</td>
+                            <td>{{ isset($appointment->client) ? $appointment->client->email : '' }}</td>
+                            <td>{{ $appointment->employee->first_name or '' }}</td>
+                            <td>{{ isset($appointment->employee) ? $appointment->employee->last_name : '' }}</td>
+                            <td>{{ $appointment->start_time }}</td>
+                            <td>{{ $appointment->finish_time }}</td>
+                            <td>{!! $appointment->comments !!}</td>
+                            <td>
+                                @can('appointment_view')
+                                    <a href="{{ route('admin.appointments.show',[$appointment->id]) }}"
+                                       class="btn btn-xs btn-primary">@lang('quickadmin.qa_view')</a>
+                                @endcan
+                                @can('appointment_edit')
+                                    <a href="{{ route('admin.appointments.edit',[$appointment->id]) }}"
+                                       class="btn btn-xs btn-info">@lang('quickadmin.qa_edit')</a>
+                                @endcan
+                                @can('appointment_delete')
+                                    {!! Form::open(array(
+                                        'style' => 'display: inline-block;',
+                                        'method' => 'DELETE',
+                                        'onsubmit' => "return confirm('".trans("quickadmin.qa_are_you_sure")."');",
+                                        'route' => ['admin.appointments.destroy', $appointment->id])) !!}
+                                    {!! Form::submit(trans('quickadmin.qa_delete'), array('class' => 'btn btn-xs btn-danger')) !!}
+                                    {!! Form::close() !!}
+                                @endcan
+                            </td>
+                        </tr>
+                    @endforeach
+                @else
+                    <tr>
+                        <td colspan="9">@lang('quickadmin.qa_no_entries_in_table')</td>
+                    </tr>
+                @endif
+                </tbody>
+            </table>
         </div>
     </div>
-@endcan
-<div class="card">
-    <div class="card-header">
-        {{ trans('cruds.appointment.title_singular') }} {{ trans('global.list') }}
-    </div>
+@stop
 
-    <div class="card-body">
-        <table class=" table table-bordered table-striped table-hover ajaxTable datatable datatable-Appointment">
-            <thead>
-                <tr>
-                    <th width="10">
+@section('javascript')
+    <script>
+        @can('appointment_delete')
+            window.route_mass_crud_entries_destroy = '{{ route('admin.appointments.mass_destroy') }}';
+        @endcan
 
-                    </th>
-                    <th>
-                        {{ trans('cruds.appointment.fields.id') }}
-                    </th>
-                    <th>
-                        {{ trans('cruds.appointment.fields.client') }}
-                    </th>
-                    <th>
-                        {{ trans('cruds.appointment.fields.employee') }}
-                    </th>
-                    <th>
-                        {{ trans('cruds.appointment.fields.start_time') }}
-                    </th>
-                    <th>
-                        {{ trans('cruds.appointment.fields.finish_time') }}
-                    </th>
-                    <th>
-                        {{ trans('cruds.appointment.fields.price') }}
-                    </th>
-                    <th>
-                        {{ trans('cruds.appointment.fields.comments') }}
-                    </th>
-                    <th>
-                        {{ trans('cruds.appointment.fields.services') }}
-                    </th>
-                    <th>
-                        &nbsp;
-                    </th>
-                </tr>
-            </thead>
-        </table>
+    </script>
 
-
-    </div>
-</div>
-@endsection
-@section('scripts')
-@parent
-<script>
-    $(function () {
-  let dtButtons = $.extend(true, [], $.fn.dataTable.defaults.buttons)
-@can('appointment_delete')
-  let deleteButtonTrans = '{{ trans('global.datatables.delete') }}';
-  let deleteButton = {
-    text: deleteButtonTrans,
-    url: "{{ route('admin.appointments.massDestroy') }}",
-    className: 'btn-danger',
-    action: function (e, dt, node, config) {
-      var ids = $.map(dt.rows({ selected: true }).data(), function (entry) {
-          return entry.id
-      });
-
-      if (ids.length === 0) {
-        alert('{{ trans('global.datatables.zero_selected') }}')
-
-        return
-      }
-
-      if (confirm('{{ trans('global.areYouSure') }}')) {
-        $.ajax({
-          headers: {'x-csrf-token': _token},
-          method: 'POST',
-          url: config.url,
-          data: { ids: ids, _method: 'DELETE' }})
-          .done(function () { location.reload() })
-      }
-    }
-  }
-  dtButtons.push(deleteButton)
-@endcan
-
-  let dtOverrideGlobals = {
-    buttons: dtButtons,
-    processing: true,
-    serverSide: true,
-    retrieve: true,
-    aaSorting: [],
-    ajax: "{{ route('admin.appointments.index') }}",
-    columns: [
-      { data: 'placeholder', name: 'placeholder' },
-{ data: 'id', name: 'id' },
-{ data: 'client_name', name: 'client.name' },
-{ data: 'employee_name', name: 'employee.name' },
-{ data: 'start_time', name: 'start_time' },
-{ data: 'finish_time', name: 'finish_time' },
-{ data: 'price', name: 'price' },
-{ data: 'comments', name: 'comments' },
-{ data: 'services', name: 'services.name' },
-{ data: 'actions', name: '{{ trans('global.actions') }}' }
-    ],
-    order: [[ 1, 'desc' ]],
-    pageLength: 100,
-  };
-  $('.datatable-Appointment').DataTable(dtOverrideGlobals);
-    $('a[data-toggle="tab"]').on('shown.bs.tab', function(e){
-        $($.fn.dataTable.tables(true)).DataTable()
-            .columns.adjust();
-    });
-});
-
-</script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.17.1/moment.min.js'></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.1.0/fullcalendar.min.js'></script>
+    <script>
+        $(document).ready(function() {
+            // page is now ready, initialize the calendar...
+            $('#calendar').fullCalendar({
+                // put your options and callbacks here
+                defaultView: 'agendaWeek',
+                events : [
+                        @foreach($appointments as $appointment)
+                    {
+                        title : '{{ $appointment->client->first_name . ' ' . $appointment->client->last_name }}',
+                        start : '{{ $appointment->start_time }}',
+                        @if ($appointment->finish_time)
+                                end: '{{ $appointment->finish_time }}',
+                        @endif
+                        url : '{{ route('admin.appointments.edit', $appointment->id) }}'
+                    },
+                    @endforeach
+                ]
+            })
+        });
+    </script>
 @endsection

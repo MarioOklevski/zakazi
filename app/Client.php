@@ -1,34 +1,23 @@
 <?php
-
 namespace App;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * Class Client
+ *
+ * @package App
+ * @property string $first_name
+ * @property string $last_name
+ * @property string $phone
+ * @property string $email
+*/
 class Client extends Model
 {
-    use SoftDeletes, HasFactory;
+    use SoftDeletes;
 
-    public $table = 'clients';
-
-    protected $dates = [
-        'created_at',
-        'updated_at',
-        'deleted_at',
-    ];
-
-    protected $fillable = [
-        'name',
-        'phone',
-        'email',
-        'created_at',
-        'updated_at',
-        'deleted_at',
-    ];
-
-    public function appointments()
-    {
-        return $this->hasMany(Appointment::class, 'client_id', 'id');
-    }
+    protected $fillable = ['first_name', 'last_name', 'phone', 'email'];
+    
+    
 }

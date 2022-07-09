@@ -3,145 +3,176 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Appointment;
-use App\Client;
-use App\Employee;
-use App\Http\Controllers\Controller;
-use App\Http\Requests\MassDestroyAppointmentRequest;
-use App\Http\Requests\StoreAppointmentRequest;
-use App\Http\Requests\UpdateAppointmentRequest;
-use App\Service;
-use Gate;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
-use Yajra\DataTables\Facades\DataTables;
+use Illuminate\Support\Facades\Gate;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreAppointmentsRequest;
+use App\Http\Requests\Admin\UpdateAppointmentsRequest;
 
 class AppointmentsController extends Controller
 {
-    public function index(Request $request)
+    /**
+     * Display a listing of Appointment.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function index()
     {
-        if ($request->ajax()) {
-            $query = Appointment::with(['client', 'employee', 'services'])->select(sprintf('%s.*', (new Appointment)->table));
-            $table = Datatables::of($query);
-
-            $table->addColumn('placeholder', '&nbsp;');
-            $table->addColumn('actions', '&nbsp;');
-
-            $table->editColumn('actions', function ($row) {
-                $viewGate      = 'appointment_show';
-                $editGate      = 'appointment_edit';
-                $deleteGate    = 'appointment_delete';
-                $crudRoutePart = 'appointments';
-
-                return view('partials.datatablesActions', compact(
-                    'viewGate',
-                    'editGate',
-                    'deleteGate',
-                    'crudRoutePart',
-                    'row'
-                ));
-            });
-
-            $table->editColumn('id', function ($row) {
-                return $row->id ? $row->id : "";
-            });
-            $table->addColumn('client_name', function ($row) {
-                return $row->client ? $row->client->name : '';
-            });
-
-            $table->addColumn('employee_name', function ($row) {
-                return $row->employee ? $row->employee->name : '';
-            });
-
-            $table->editColumn('price', function ($row) {
-                return $row->price ? $row->price : "";
-            });
-            $table->editColumn('comments', function ($row) {
-                return $row->comments ? $row->comments : "";
-            });
-            $table->editColumn('services', function ($row) {
-                $labels = [];
-
-                foreach ($row->services as $service) {
-                    $labels[] = sprintf('<span class="label label-info label-many">%s</span>', $service->name);
-                }
-
-                return implode(' ', $labels);
-            });
-
-            $table->rawColumns(['actions', 'placeholder', 'client', 'employee', 'services']);
-
-            return $table->make(true);
+        if (! Gate::allows('appointment_access')) {
+            return abort(401);
         }
 
-        return view('admin.appointments.index');
+        $appointments = Appointment::all();
+
+        return view('admin.appointments.index', compact('appointments'));
     }
 
+    /**
+     * Show the form for creating new Appointment.
+     *
+     * @return \Illuminate\Http\Response
+     */
     public function create()
     {
-        abort_if(Gate::denies('appointment_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        if (! Gate::allows('appointment_create')) {
+            return abort(401);
+        }
+        $relations = [
+            'clients' => \App\Client::get(),
+            'employees' => \App\Employee::get(),
+			'services' => \App\Service::get(),
+        ];
 
-        $clients = Client::all()->pluck('name', 'id')->prepend(trans('global.pleaseSelect'), '');
-
-        $employees = Employee::all()->pluck('name', 'id')->prepend(trans('global.pleaseSelect'), '');
-
-        $services = Service::all()->pluck('name', 'id');
-
-        return view('admin.appointments.create', compact('clients', 'employees', 'services'));
+        return view('admin.appointments.create', $relations);
     }
 
-    public function store(StoreAppointmentRequest $request)
+    /**
+     * Store a newly created Appointment in storage.
+     *
+     * @param  \App\Http\Requests\StoreAppointmentsRequest  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function store(StoreAppointmentsRequest $request)
     {
-        $appointment = Appointment::create($request->all());
-        $appointment->services()->sync($request->input('services', []));
+        if (! Gate::allows('appointment_create')) {
+            return abort(401);
+        }
+		$employee = \App\Employee::find($request->employee_id);
+		$working_hours = \App\WorkingHour::where('employee_id', $request->employee_id)->whereDay('date', '=', date("d", strtotime($request->date)))->whereTime('start_time', '<=', date("H:i", strtotime("".$request->starting_hour.":".$request->starting_minute.":00")))->whereTime('finish_time', '>=', date("H:i", strtotime("".$request->finish_hour.":".$request->finish_minute.":00")))->get();
+		if(!$employee->provides_service($request->service_id)) return redirect()->back()->withErrors("This employee doesn't provide your selected service")->withInput();
+        if($working_hours->isEmpty()) return redirect()->back()->withErrors("This employee isn't working at your selected time")->withInput();
+		$appointment = new Appointment;
+		$appointment->client_id = $request->client_id;
+		$appointment->employee_id = $request->employee_id;
+		$appointment->start_time = "".$request->date." ".$request->starting_hour .":".$request->starting_minute.":00";
+		$appointment->finish_time = "".$request->date." ".$request->finish_hour .":".$request->finish_minute.":00";
+		$appointment->comments = $request->comments;
+		$appointment->save();
+
+
 
         return redirect()->route('admin.appointments.index');
     }
 
-    public function edit(Appointment $appointment)
+
+    /**
+     * Show the form for editing Appointment.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function edit($id)
     {
-        abort_if(Gate::denies('appointment_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        if (! Gate::allows('appointment_edit')) {
+            return abort(401);
+        }
+        $relations = [
+            'clients' => \App\Client::get()->pluck('first_name', 'id')->prepend('Please select', ''),
+            'employees' => \App\Employee::get()->pluck('first_name', 'id')->prepend('Please select', ''),
+        ];
 
-        $clients = Client::all()->pluck('name', 'id')->prepend(trans('global.pleaseSelect'), '');
+        $appointment = Appointment::findOrFail($id);
 
-        $employees = Employee::all()->pluck('name', 'id')->prepend(trans('global.pleaseSelect'), '');
-
-        $services = Service::all()->pluck('name', 'id');
-
-        $appointment->load('client', 'employee', 'services');
-
-        return view('admin.appointments.edit', compact('clients', 'employees', 'services', 'appointment'));
+        return view('admin.appointments.edit', compact('appointment') + $relations);
     }
 
-    public function update(UpdateAppointmentRequest $request, Appointment $appointment)
+    /**
+     * Update Appointment in storage.
+     *
+     * @param  \App\Http\Requests\UpdateAppointmentsRequest  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function update(UpdateAppointmentsRequest $request, $id)
     {
+        if (! Gate::allows('appointment_edit')) {
+            return abort(401);
+        }
+        $appointment = Appointment::findOrFail($id);
         $appointment->update($request->all());
-        $appointment->services()->sync($request->input('services', []));
+
+
 
         return redirect()->route('admin.appointments.index');
     }
 
-    public function show(Appointment $appointment)
+
+    /**
+     * Display Appointment.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function show($id)
     {
-        abort_if(Gate::denies('appointment_show'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        if (! Gate::allows('appointment_view')) {
+            return abort(401);
+        }
+        $relations = [
+            'clients' => \App\Client::get()->pluck('first_name', 'id')->prepend('Please select', ''),
+            'employees' => \App\Employee::get()->pluck('first_name', 'id')->prepend('Please select', ''),
+        ];
 
-        $appointment->load('client', 'employee', 'services');
+        $appointment = Appointment::findOrFail($id);
 
-        return view('admin.appointments.show', compact('appointment'));
+        return view('admin.appointments.show', compact('appointment') + $relations);
     }
 
-    public function destroy(Appointment $appointment)
-    {
-        abort_if(Gate::denies('appointment_delete'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
+    /**
+     * Remove Appointment from storage.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function destroy($id)
+    {
+        if (! Gate::allows('appointment_delete')) {
+            return abort(401);
+        }
+        $appointment = Appointment::findOrFail($id);
         $appointment->delete();
 
-        return back();
+        return redirect()->route('admin.appointments.index');
     }
 
-    public function massDestroy(MassDestroyAppointmentRequest $request)
+    /**
+     * Delete all selected Appointment at once.
+     *
+     * @param Request $request
+     */
+    public function massDestroy(Request $request)
     {
-        Appointment::whereIn('id', request('ids'))->delete();
+        if (! Gate::allows('appointment_delete')) {
+            return abort(401);
+        }
+        if ($request->input('ids')) {
+            $entries = Appointment::whereIn('id', $request->input('ids'))->get();
 
-        return response(null, Response::HTTP_NO_CONTENT);
+            foreach ($entries as $entry) {
+                $entry->delete();
+            }
+        }
     }
+
 }

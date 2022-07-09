@@ -1,89 +1,60 @@
-@extends('layouts.admin')
+@extends('layouts.app')
+
 @section('content')
+    <h3 class="page-title">@lang('quickadmin.appointments.title')</h3>
 
-<div class="card">
-    <div class="card-header">
-        {{ trans('global.show') }} {{ trans('cruds.appointment.title') }}
-    </div>
-
-    <div class="card-body">
-        <div class="mb-2">
-            <table class="table table-bordered table-striped">
-                <tbody>
-                    <tr>
-                        <th>
-                            {{ trans('cruds.appointment.fields.id') }}
-                        </th>
-                        <td>
-                            {{ $appointment->id }}
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>
-                            {{ trans('cruds.appointment.fields.client') }}
-                        </th>
-                        <td>
-                            {{ $appointment->client->name ?? '' }}
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>
-                            {{ trans('cruds.appointment.fields.employee') }}
-                        </th>
-                        <td>
-                            {{ $appointment->employee->name ?? '' }}
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>
-                            {{ trans('cruds.appointment.fields.start_time') }}
-                        </th>
-                        <td>
-                            {{ $appointment->start_time }}
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>
-                            {{ trans('cruds.appointment.fields.finish_time') }}
-                        </th>
-                        <td>
-                            {{ $appointment->finish_time }}
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>
-                            {{ trans('cruds.appointment.fields.price') }}
-                        </th>
-                        <td>
-                            ${{ $appointment->price }}
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>
-                            {{ trans('cruds.appointment.fields.comments') }}
-                        </th>
-                        <td>
-                            {!! $appointment->comments !!}
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>
-                            Services
-                        </th>
-                        <td>
-                            @foreach($appointment->services as $id => $services)
-                                <span class="label label-info label-many">{{ $services->name }}</span>
-                            @endforeach
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-            <a style="margin-top:20px;" class="btn btn-default" href="{{ url()->previous() }}">
-                {{ trans('global.back_to_list') }}
-            </a>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            @lang('quickadmin.qa_view')
         </div>
 
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <table class="table table-bordered table-striped">
+                        <tr>
+                            <th>@lang('quickadmin.appointments.fields.client')</th>
+                            <td>{{ $appointment->client->first_name or '' }}</td>
+                        </tr>
+                        <tr>
+                            <th>@lang('quickadmin.clients.fields.last-name')</th>
+                            <td>{{ isset($appointment->client) ? $appointment->client->last_name : '' }}</td>
+                        </tr>
+                        <tr>
+                            <th>@lang('quickadmin.clients.fields.phone')</th>
+                            <td>{{ isset($appointment->client) ? $appointment->client->phone : '' }}</td>
+                        </tr>
+                        <tr>
+                            <th>@lang('quickadmin.clients.fields.email')</th>
+                            <td>{{ isset($appointment->client) ? $appointment->client->email : '' }}</td>
+                        </tr>
+                        <tr>
+                            <th>@lang('quickadmin.appointments.fields.employee')</th>
+                            <td>{{ $appointment->employee->first_name or '' }}</td>
+                        </tr>
+                        <tr>
+                            <th>@lang('quickadmin.employees.fields.last-name')</th>
+                            <td>{{ isset($appointment->employee) ? $appointment->employee->last_name : '' }}</td>
+                        </tr>
+                        <tr>
+                            <th>@lang('quickadmin.appointments.fields.start-time')</th>
+                            <td>{{ $appointment->start_time }}</td>
+                        </tr>
+                        <tr>
+                            <th>@lang('quickadmin.appointments.fields.finish-time')</th>
+                            <td>{{ $appointment->finish_time }}</td>
+                        </tr>
+                        <tr>
+                            <th>@lang('quickadmin.appointments.fields.comments')</th>
+                            <td>{!! $appointment->comments !!}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
 
+            <p>&nbsp;</p>
+
+            <a href="{{ route('admin.appointments.index') }}" class="btn btn-default">@lang('quickadmin.qa_back_to_list')</a>
+        </div>
     </div>
-</div>
-@endsection
+@stop

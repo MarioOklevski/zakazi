@@ -1,44 +1,43 @@
-@extends('layouts.admin')
+@extends('layouts.app')
+
 @section('content')
+    <h3 class="page-title">@lang('quickadmin.services.title')</h3>
+    {!! Form::open(['method' => 'POST', 'route' => ['admin.services.store']]) !!}
 
-<div class="card">
-    <div class="card-header">
-        {{ trans('global.create') }} {{ trans('cruds.service.title_singular') }}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            @lang('quickadmin.qa_create')
+        </div>
+        
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-xs-12 form-group">
+                    {!! Form::label('name', 'Name*', ['class' => 'control-label']) !!}
+                    {!! Form::text('name', old('name'), ['class' => 'form-control', 'placeholder' => '', 'required' => '']) !!}
+                    <p class="help-block"></p>
+                    @if($errors->has('name'))
+                        <p class="help-block">
+                            {{ $errors->first('name') }}
+                        </p>
+                    @endif
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-xs-12 form-group">
+                    {!! Form::label('price', 'Price*', ['class' => 'control-label']) !!}
+                    {!! Form::text('price', old('price'), ['class' => 'form-control', 'placeholder' => '', 'required' => '']) !!}
+                    <p class="help-block"></p>
+                    @if($errors->has('price'))
+                        <p class="help-block">
+                            {{ $errors->first('price') }}
+                        </p>
+                    @endif
+                </div>
+            </div>			
+        </div>
     </div>
 
-    <div class="card-body">
-        <form action="{{ route("admin.services.store") }}" method="POST" enctype="multipart/form-data">
-            @csrf
-            <div class="form-group {{ $errors->has('name') ? 'has-error' : '' }}">
-                <label for="name">{{ trans('cruds.service.fields.name') }}*</label>
-                <input type="text" id="name" name="name" class="form-control" value="{{ old('name', isset($service) ? $service->name : '') }}" required>
-                @if($errors->has('name'))
-                    <em class="invalid-feedback">
-                        {{ $errors->first('name') }}
-                    </em>
-                @endif
-                <p class="helper-block">
-                    {{ trans('cruds.service.fields.name_helper') }}
-                </p>
-            </div>
-            <div class="form-group {{ $errors->has('price') ? 'has-error' : '' }}">
-                <label for="price">{{ trans('cruds.service.fields.price') }}</label>
-                <input type="number" id="price" name="price" class="form-control" value="{{ old('price', isset($service) ? $service->price : '') }}" step="0.01">
-                @if($errors->has('price'))
-                    <em class="invalid-feedback">
-                        {{ $errors->first('price') }}
-                    </em>
-                @endif
-                <p class="helper-block">
-                    {{ trans('cruds.service.fields.price_helper') }}
-                </p>
-            </div>
-            <div>
-                <input class="btn btn-danger" type="submit" value="{{ trans('global.save') }}">
-            </div>
-        </form>
+    {!! Form::submit(trans('quickadmin.qa_save'), ['class' => 'btn btn-danger']) !!}
+    {!! Form::close() !!}
+@stop
 
-
-    </div>
-</div>
-@endsection

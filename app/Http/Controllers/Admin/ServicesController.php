@@ -1,109 +1,116 @@
 <?php
 
 namespace App\Http\Controllers\Admin;
-
+use Illuminate\Support\Facades\Gate;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\MassDestroyServiceRequest;
-use App\Http\Requests\StoreServiceRequest;
-use App\Http\Requests\UpdateServiceRequest;
 use App\Service;
-use Gate;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
-use Yajra\DataTables\Facades\DataTables;
 
 class ServicesController extends Controller
 {
-    public function index(Request $request)
+    /**
+     * Display a listing of the resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function index()
     {
-        if ($request->ajax()) {
-            $query = Service::query()->select(sprintf('%s.*', (new Service)->table));
-            $table = Datatables::of($query);
-
-            $table->addColumn('placeholder', '&nbsp;');
-            $table->addColumn('actions', '&nbsp;');
-
-            $table->editColumn('actions', function ($row) {
-                $viewGate      = 'service_show';
-                $editGate      = 'service_edit';
-                $deleteGate    = 'service_delete';
-                $crudRoutePart = 'services';
-
-                return view('partials.datatablesActions', compact(
-                    'viewGate',
-                    'editGate',
-                    'deleteGate',
-                    'crudRoutePart',
-                    'row'
-                ));
-            });
-
-            $table->editColumn('id', function ($row) {
-                return $row->id ? $row->id : "";
-            });
-            $table->editColumn('name', function ($row) {
-                return $row->name ? $row->name : "";
-            });
-            $table->editColumn('price', function ($row) {
-                return $row->price ? $row->price : "";
-            });
-
-            $table->rawColumns(['actions', 'placeholder']);
-
-            return $table->make(true);
+        if (! Gate::allows('service_access')) {
+            return abort(401);
         }
 
-        return view('admin.services.index');
+        $services = Service::all();
+
+        return view('admin.services.index', compact('services'));
     }
 
+    /**
+     * Show the form for creating a new resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
     public function create()
     {
-        abort_if(Gate::denies('service_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
-
+        if (! Gate::allows('service_create')) {
+            return abort(401);
+        }
         return view('admin.services.create');
     }
 
-    public function store(StoreServiceRequest $request)
+    /**
+     * Store a newly created resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function store(Request $request)
     {
+        if (! Gate::allows('service_create')) {
+            return abort(401);
+        }
         $service = Service::create($request->all());
 
-        return redirect()->route('admin.services.index');
-    }
 
-    public function edit(Service $service)
-    {
-        abort_if(Gate::denies('service_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
-
-        return view('admin.services.edit', compact('service'));
-    }
-
-    public function update(UpdateServiceRequest $request, Service $service)
-    {
-        $service->update($request->all());
 
         return redirect()->route('admin.services.index');
     }
 
-    public function show(Service $service)
+    /**
+     * Display the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function show($id)
     {
-        abort_if(Gate::denies('service_show'), Response::HTTP_FORBIDDEN, '403 Forbidden');
-
-        return view('admin.services.show', compact('service'));
+        //
     }
 
-    public function destroy(Service $service)
+    /**
+     * Show the form for editing the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function edit($id)
     {
-        abort_if(Gate::denies('service_delete'), Response::HTTP_FORBIDDEN, '403 Forbidden');
-
-        $service->delete();
-
-        return back();
+        //
     }
 
-    public function massDestroy(MassDestroyServiceRequest $request)
+    /**
+     * Update the specified resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function update(Request $request, $id)
     {
-        Service::whereIn('id', request('ids'))->delete();
+        //
+    }
 
-        return response(null, Response::HTTP_NO_CONTENT);
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function destroy($id)
+    {
+        //
+    }
+	
+	public function massDestroy(Request $request)
+    {
+        if (! Gate::allows('service_delete')) {
+            return abort(401);
+        }
+        if ($request->input('ids')) {
+            $entries = Service::whereIn('id', $request->input('ids'))->get();
+
+            foreach ($entries as $entry) {
+                $entry->delete();
+            }
+        }
     }
 }

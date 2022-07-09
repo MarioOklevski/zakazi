@@ -3,156 +3,188 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Employee;
-use App\Http\Controllers\Controller;
-use App\Http\Controllers\Traits\MediaUploadingTrait;
-use App\Http\Requests\MassDestroyEmployeeRequest;
-use App\Http\Requests\StoreEmployeeRequest;
-use App\Http\Requests\UpdateEmployeeRequest;
 use App\Service;
-use Gate;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
-use Yajra\DataTables\Facades\DataTables;
-
+use Illuminate\Support\Facades\Gate;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreEmployeesRequest;
+use App\Http\Requests\Admin\UpdateEmployeesRequest;
+use DB;
 class EmployeesController extends Controller
 {
-    use MediaUploadingTrait;
-
-    public function index(Request $request)
+    /**
+     * Display a listing of Employee.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function index()
     {
-        if ($request->ajax()) {
-            $query = Employee::with(['services'])->select(sprintf('%s.*', (new Employee)->table));
-            $table = Datatables::of($query);
-
-            $table->addColumn('placeholder', '&nbsp;');
-            $table->addColumn('actions', '&nbsp;');
-
-            $table->editColumn('actions', function ($row) {
-                $viewGate      = 'employee_show';
-                $editGate      = 'employee_edit';
-                $deleteGate    = 'employee_delete';
-                $crudRoutePart = 'employees';
-
-                return view('partials.datatablesActions', compact(
-                    'viewGate',
-                    'editGate',
-                    'deleteGate',
-                    'crudRoutePart',
-                    'row'
-                ));
-            });
-
-            $table->editColumn('id', function ($row) {
-                return $row->id ? $row->id : "";
-            });
-            $table->editColumn('name', function ($row) {
-                return $row->name ? $row->name : "";
-            });
-            $table->editColumn('email', function ($row) {
-                return $row->email ? $row->email : "";
-            });
-            $table->editColumn('phone', function ($row) {
-                return $row->phone ? $row->phone : "";
-            });
-            $table->editColumn('photo', function ($row) {
-                if ($photo = $row->photo) {
-                    return sprintf(
-                        '<a href="%s" target="_blank"><img src="%s" width="50px" height="50px"></a>',
-                        $photo->url,
-                        $photo->thumbnail
-                    );
-                }
-
-                return '';
-            });
-            $table->editColumn('services', function ($row) {
-                $labels = [];
-
-                foreach ($row->services as $service) {
-                    $labels[] = sprintf('<span class="label label-info label-many">%s</span>', $service->name);
-                }
-
-                return implode(' ', $labels);
-            });
-
-            $table->rawColumns(['actions', 'placeholder', 'photo', 'services']);
-
-            return $table->make(true);
+        if (! Gate::allows('employee_access')) {
+            return abort(401);
         }
 
-        return view('admin.employees.index');
+        $employees = Employee::all();
+
+        return view('admin.employees.index', compact('employees'));
     }
 
+    /**
+     * Show the form for creating new Employee.
+     *
+     * @return \Illuminate\Http\Response
+     */
     public function create()
     {
-        abort_if(Gate::denies('employee_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
-
-        $services = Service::all()->pluck('name', 'id');
-
-        return view('admin.employees.create', compact('services'));
+        if (! Gate::allows('employee_create')) {
+            return abort(401);
+        }
+		$relations = [
+            'services' => \App\Service::get()->pluck('name', 'id'),
+        ];
+        return view('admin.employees.create', $relations);
     }
 
-    public function store(StoreEmployeeRequest $request)
+    /**
+     * Store a newly created Employee in storage.
+     *
+     * @param  \App\Http\Requests\StoreEmployeesRequest  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function store(StoreEmployeesRequest $request)
     {
-        $employee = Employee::create($request->all());
-        $employee->services()->sync($request->input('services', []));
-
-        if ($request->input('photo', false)) {
-            $employee->addMedia(storage_path('tmp/uploads/' . $request->input('photo')))->toMediaCollection('photo');
+        if (! Gate::allows('employee_create')) {
+            return abort(401);
         }
+        $employee = Employee::create($request->only(['first_name', 'last_name', 'phone', 'email']));
+		$services_ids = [];
+		foreach($request->services as $service) :
+		$services_ids[] = $service;
+		endforeach;
+		$employee->services()->attach($services_ids);
 
         return redirect()->route('admin.employees.index');
     }
 
-    public function edit(Employee $employee)
+
+    /**
+     * Show the form for editing Employee.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function edit($id)
     {
-        abort_if(Gate::denies('employee_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        if (! Gate::allows('employee_edit')) {
+            return abort(401);
+        }
+        $employee = Employee::findOrFail($id);
 
-        $services = Service::all()->pluck('name', 'id');
-
-        $employee->load('services');
-
-        return view('admin.employees.edit', compact('services', 'employee'));
+        return view('admin.employees.edit', compact('employee'));
     }
 
-    public function update(UpdateEmployeeRequest $request, Employee $employee)
+    /**
+     * Update Employee in storage.
+     *
+     * @param  \App\Http\Requests\UpdateEmployeesRequest  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function update(UpdateEmployeesRequest $request, $id)
     {
+        if (! Gate::allows('employee_edit')) {
+            return abort(401);
+        }
+        $employee = Employee::findOrFail($id);
         $employee->update($request->all());
-        $employee->services()->sync($request->input('services', []));
 
-        if ($request->input('photo', false)) {
-            if (!$employee->photo || $request->input('photo') !== $employee->photo->file_name) {
-                $employee->addMedia(storage_path('tmp/uploads/' . $request->input('photo')))->toMediaCollection('photo');
-            }
-        } elseif ($employee->photo) {
-            $employee->photo->delete();
-        }
+
 
         return redirect()->route('admin.employees.index');
     }
 
-    public function show(Employee $employee)
+
+    /**
+     * Display Employee.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function show($id)
     {
-        abort_if(Gate::denies('employee_show'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        if (! Gate::allows('employee_view')) {
+            return abort(401);
+        }
+        $relations = [
+            'working_hours' => \App\WorkingHour::where('employee_id', $id)->get(),
+            'appointments' => \App\Appointment::where('employee_id', $id)->get(),
+        ];
 
-        $employee->load('services');
+        $employee = Employee::findOrFail($id);
 
-        return view('admin.employees.show', compact('employee'));
+        return view('admin.employees.show', compact('employee') + $relations);
     }
 
-    public function destroy(Employee $employee)
-    {
-        abort_if(Gate::denies('employee_delete'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
+    /**
+     * Remove Employee from storage.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function destroy($id)
+    {
+        if (! Gate::allows('employee_delete')) {
+            return abort(401);
+        }
+        $employee = Employee::findOrFail($id);
         $employee->delete();
 
-        return back();
+        return redirect()->route('admin.employees.index');
     }
 
-    public function massDestroy(MassDestroyEmployeeRequest $request)
+    /**
+     * Delete all selected Employee at once.
+     *
+     * @param Request $request
+     */
+    public function massDestroy(Request $request)
     {
-        Employee::whereIn('id', request('ids'))->delete();
+        if (! Gate::allows('employee_delete')) {
+            return abort(401);
+        }
+        if ($request->input('ids')) {
+            $entries = Employee::whereIn('id', $request->input('ids'))->get();
 
-        return response(null, Response::HTTP_NO_CONTENT);
+            foreach ($entries as $entry) {
+                $entry->delete();
+            }
+        }
     }
+	
+	public function GetEmployees(Request $request)
+	{
+		$employees = DB::table('employees')->join('working_hours', function ($join) use ($request) {
+			$join->on('employees.id', '=', 'working_hours.employee_id')
+			->where('working_hours.date', '=', $request->date);
+		})->get();
+		$service = \App\Service::find($request->service_id);
+		$html = "";
+		$html .= "<div class='row employees'>";
+		$html .= "<div class='col-xs-12 form-group'>";
+		$html .= "<label class='control-label'>Employee*</label>";
+		$html .= "<ul class='list-inline'>";
+		if(is_object($employees) && count($employees) > 0):
+		foreach($employees as $employee) :
+			$html .= "<li><label><input type='radio' name='employee_id' class='employee_id' value='".$employee->id."'> ".$employee->first_name." ".$employee->last_name." (<span class='starting_hour_$employee->id'>".date("H", strtotime($employee->start_time))."</span>:<span class='starting_minute_$employee->id'>".date("i", strtotime($employee->start_time))."</span> - <span class='finish_hour_$employee->id'>".date("H", strtotime($employee->finish_time))."</span>:<span class='finish_minute_$employee->id'>".date("i", strtotime($employee->finish_time))."</span>)</label></li>";
+		endforeach;
+		else :
+		$html .= "<li>No employees working on your selected date</li>";
+		endif;
+		$html .= "</ul>";
+		$html .= "</div>";
+		$html .= "</div>";
+		return $html;
+		
+	}
+
 }
